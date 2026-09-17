@@ -14,6 +14,11 @@ import org.kohsuke.stapler.interceptor.RequirePOST;
 public class OllamaClientSettings extends ModelClientConfiguration {
     private @Getter final long keepAliveSeconds;
 
+    public OllamaClientSettings() throws FormException {
+        super(0L);
+        keepAliveSeconds = 0L;
+    }
+
     @DataBoundConstructor
     public OllamaClientSettings(long keepAliveSeconds, long timeoutSeconds) throws FormException {
         super(timeoutSeconds);

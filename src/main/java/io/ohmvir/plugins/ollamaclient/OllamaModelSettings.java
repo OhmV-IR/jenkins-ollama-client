@@ -33,6 +33,11 @@ import java.util.Collections;
 public class OllamaModelSettings extends ModelConfiguration {
     private final @Getter String apiBaseUrlCredentialsId;
 
+    public OllamaModelSettings() throws Descriptor.FormException {
+        super("");
+        apiBaseUrlCredentialsId = null;
+    }
+
     @DataBoundConstructor
     public OllamaModelSettings(String modelName, String apiBaseUrlCredentialsId) throws Descriptor.FormException {
         super(modelName);
