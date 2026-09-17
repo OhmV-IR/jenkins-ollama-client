@@ -10,12 +10,12 @@
   </parent>
 
   <groupId>io.ohmvir.plugins</groupId>
-  <artifactId>example-template</artifactId>
+  <artifactId>ollamaclient</artifactId>
   <version>${revision}${changelist}</version>
   <packaging>hpi</packaging>
 
-  <name>TODO plugin name</name>
-  <url>TODO github repo url</url>
+  <name>Jenkins AI Synapse Ollama Client</name>
+  <url>https://github.com/OhmV-IR/jenkins-ollama-client</url>
   <licenses>
     <license>
       <name>ARR</name>
@@ -47,7 +47,7 @@
     <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
     <jenkins.baseline>2.555</jenkins.baseline>
     <jenkins.version>${jenkins.baseline}.1</jenkins.version>
-    <gitHubRepo>OhmV-IR/REPO-NAME-TODO</gitHubRepo>
+    <gitHubRepo>OhmV-IR/jenkins-ollama-client</gitHubRepo>
 
     <spotless.check.skip>false</spotless.check.skip>
     <ban-junit4-imports.skip>false</ban-junit4-imports.skip>
@@ -79,6 +79,32 @@
     <dependency>
       <groupId>io.ohmvir.plugins</groupId>
       <artifactId>jenkinsaisynapse</artifactId>
+      <version>1.3</version>
+      <type>hpi</type>
+    </dependency>
+    <dependency>
+      <groupId>io.ohmvir.plugins</groupId>
+      <artifactId>jenkinsaisynapse</artifactId>
+      <version>1.3</version>
+      <type>jar</type>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <version>1.18.48</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>plain-credentials</artifactId>
+      <version>199.v9f8e1f741799</version>
+      <type>hpi</type>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>credentials</artifactId>
+      <version>1511.v2e3cb_0008ef0</version>
       <type>hpi</type>
     </dependency>
   </dependencies>
@@ -117,7 +143,7 @@
         <artifactId>maven-release-plugin</artifactId>
         <version>3.1.1</version>
         <configuration>
-          <tagNameFormat>TODO-TAGNAME-TEMPLATE-@{project.version}</tagNameFormat>
+          <tagNameFormat>v@{project.version}</tagNameFormat>
         </configuration>
       </plugin>
     </plugins>
