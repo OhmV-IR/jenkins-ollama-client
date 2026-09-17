@@ -5,10 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import hudson.model.Describable;
-import java.util.List;
-
-import io.ohmvir.plugins.jenkinsaisynapse.configuration.client.ModelClientConfiguration;
 import io.ohmvir.plugins.jenkinsaisynapse.configuration.models.ModelConfiguration;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
@@ -17,19 +15,15 @@ import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 public class DescriptorRegistrationTest {
     // Abstract classes with lists of descriptors
     private static final List<Class<? extends Describable>> DESCRIPTOR_ABSTRACT_CLASSES_TO_TEST =
-            List.of(
-                    ModelConfiguration.class
-            );
+            List.of(ModelConfiguration.class);
 
     // Classes that extend something from DESCRIPTOR_ABSTRACT_CLASSES_TO_TEST
-    private static final List<Class<? extends Describable<?>>> CONCRETE_EXTENSION_IMPLEMENTATIONS_TO_TEST = List.of(
-            OllamaModelSettings.class
-            );
+    private static final List<Class<? extends Describable<?>>> CONCRETE_EXTENSION_IMPLEMENTATIONS_TO_TEST =
+            List.of(OllamaModelSettings.class);
 
     // 3. Classes that extend Descriptor directly.
-    private static final List<Class<? extends Describable<?>>> STANDALONE_CONCRETE_CLASSES_TO_TEST = List.of(
-            OllamaClientSettings.class
-    );
+    private static final List<Class<? extends Describable<?>>> STANDALONE_CONCRETE_CLASSES_TO_TEST =
+            List.of(OllamaClientSettings.class);
 
     @Test
     public void verifyAbstractDescriptorListsAreNotEmpty(JenkinsRule j) {
