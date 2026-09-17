@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+    <f:section title="${%Ollama Client Configuration}">
+        <f:entry title="${%Keep Alive Seconds}" description="${%How long to keep the model loaded in memory after the request finishes}" field="keepAliveSeconds">
+            <f:number />
+        </f:entry>
+        <f:entry title="${%Timeout Seconds}" description="${%How long to wait for the model to respond before giving up. 0 is considered infinite}" field="timeoutSeconds">
+            <f:number />
+        </f:entry>
+    </f:section>
+</j:jelly>
