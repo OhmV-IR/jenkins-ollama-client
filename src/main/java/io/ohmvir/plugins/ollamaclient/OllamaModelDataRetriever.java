@@ -6,7 +6,6 @@ import com.google.gson.JsonParser;
 import hudson.Extension;
 import io.ohmvir.plugins.jenkinsaisynapse.api.models.*;
 import io.ohmvir.plugins.jenkinsaisynapse.utils.SecretsUtils;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -35,19 +34,26 @@ public class OllamaModelDataRetriever extends ModelDataRetriever<OllamaModelSett
             throws IOException, InterruptedException {
         ModelData ret = new ModelData(configuration);
         HttpRequest modelDetailsReq = HttpRequest.newBuilder()
-                .uri(URI.create(
-                        SecretsUtils.getSecretText(configuration.getApiBaseUrlCredentialsId(), null) + RETRIEVE_MODEL_INFO_SUFFIX))
-                .POST(HttpRequest.BodyPublishers.ofString(String.format("{\"model\":\"%s\",\"verbose\":true}", configuration.modelName)))
+                .uri(URI.create(SecretsUtils.getSecretText(configuration.getApiBaseUrlCredentialsId(), null)
+                        + RETRIEVE_MODEL_INFO_SUFFIX))
+                .POST(HttpRequest.BodyPublishers.ofString(
+                        String.format("{\"model\":\"%s\",\"verbose\":true}", configuration.modelName)))
                 .build();
         HttpResponse<String> res = httpClient.send(modelDetailsReq, HttpResponse.BodyHandlers.ofString());
         JsonObject resJson = JsonParser.parseString(res.body()).getAsJsonObject();
-        Set<String> capabilities = resJson.getAsJsonArray("capabilities").asList()
-                .stream().map(JsonElement::getAsString)
+        Set<String> capabilities = resJson.getAsJsonArray("capabilities").asList().stream()
+                .map(JsonElement::getAsString)
                 .collect(Collectors.toSet());
         if (configuration.modelName.contains("gpt-oss")) {
-            ret.setSupportedThinkingLevels(List.of(ModelThinkingLevel.LOW, ModelThinkingLevel.MEDIUM, ModelThinkingLevel.HIGH));
+            ret.setSupportedThinkingLevels(
+                    List.of(ModelThinkingLevel.LOW, ModelThinkingLevel.MEDIUM, ModelThinkingLevel.HIGH));
         } else if (capabilities.contains("thinking")) {
-            ret.setSupportedThinkingLevels(List.of(ModelThinkingLevel.OFF, ModelThinkingLevel.LOW, ModelThinkingLevel.MEDIUM, ModelThinkingLevel.HIGH, ModelThinkingLevel.MAX));
+            ret.setSupportedThinkingLevels(List.of(
+                    ModelThinkingLevel.OFF,
+                    ModelThinkingLevel.LOW,
+                    ModelThinkingLevel.MEDIUM,
+                    ModelThinkingLevel.HIGH,
+                    ModelThinkingLevel.MAX));
         }
         ArrayList<ModelCapability> capabilitiesEnumArr = new ArrayList<>();
         capabilitiesEnumArr.add(ModelCapability.STREAMING);
@@ -74,7 +80,7 @@ public class OllamaModelDataRetriever extends ModelDataRetriever<OllamaModelSett
         ret.setInputs(supportedInputTypes);
         ret.setCapabilities(capabilitiesEnumArr);
         ArrayList<ModelOutputType> outputTypes = new ArrayList<>();
-        if(capabilities.contains("completion")) {
+        if (capabilities.contains("completion")) {
             outputTypes.add(ModelOutputType.UNSTRUCTURED_TEXT);
             outputTypes.add(ModelOutputType.STRUCTURED_OUTPUT);
         }
