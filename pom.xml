@@ -79,13 +79,13 @@
     <dependency>
       <groupId>io.ohmvir.plugins</groupId>
       <artifactId>jenkinsaisynapse</artifactId>
-      <version>1.3</version>
+      <version>1.5</version>
       <type>hpi</type>
     </dependency>
     <dependency>
       <groupId>io.ohmvir.plugins</groupId>
       <artifactId>jenkinsaisynapse</artifactId>
-      <version>1.3</version>
+      <version>1.5</version>
       <type>jar</type>
       <scope>compile</scope>
     </dependency>
