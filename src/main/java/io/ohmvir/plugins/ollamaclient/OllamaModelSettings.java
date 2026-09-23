@@ -34,13 +34,13 @@ public class OllamaModelSettings extends ModelConfiguration {
     private final @Getter String apiBaseUrlCredentialsId;
 
     public OllamaModelSettings() throws Descriptor.FormException {
-        super("");
+        super("", "");
         apiBaseUrlCredentialsId = null;
     }
 
     @DataBoundConstructor
     public OllamaModelSettings(String modelName, String apiBaseUrlCredentialsId) throws Descriptor.FormException {
-        super(modelName);
+        super(modelName, modelName);
         if (SecretsUtils.getSecretText(apiBaseUrlCredentialsId, null) == null) {
             throw new Descriptor.FormException(
                     "apiUrlCredentialId does not resolve to a valid string credential", "apiUrlCredentialId");

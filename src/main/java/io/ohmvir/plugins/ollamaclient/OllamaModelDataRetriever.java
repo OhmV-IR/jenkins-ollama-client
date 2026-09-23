@@ -37,14 +37,14 @@ public class OllamaModelDataRetriever extends ModelDataRetriever<OllamaModelSett
                 .uri(URI.create(SecretsUtils.getSecretText(configuration.getApiBaseUrlCredentialsId(), null)
                         + RETRIEVE_MODEL_INFO_SUFFIX))
                 .POST(HttpRequest.BodyPublishers.ofString(
-                        String.format("{\"model\":\"%s\",\"verbose\":true}", configuration.modelName)))
+                        String.format("{\"model\":\"%s\",\"verbose\":true}", configuration.getModelName())))
                 .build();
         HttpResponse<String> res = httpClient.send(modelDetailsReq, HttpResponse.BodyHandlers.ofString());
         JsonObject resJson = JsonParser.parseString(res.body()).getAsJsonObject();
         Set<String> capabilities = resJson.getAsJsonArray("capabilities").asList().stream()
                 .map(JsonElement::getAsString)
                 .collect(Collectors.toSet());
-        if (configuration.modelName.contains("gpt-oss")) {
+        if (configuration.getModelName().contains("gpt-oss")) {
             ret.setSupportedThinkingLevels(
                     List.of(ModelThinkingLevel.LOW, ModelThinkingLevel.MEDIUM, ModelThinkingLevel.HIGH));
         } else if (capabilities.contains("thinking")) {
