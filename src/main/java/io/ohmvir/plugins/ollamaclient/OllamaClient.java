@@ -14,8 +14,6 @@ import io.ohmvir.plugins.jenkinsaisynapse.api.models.ModelFinishReason;
 import io.ohmvir.plugins.jenkinsaisynapse.api.models.ModelThinkingLevel;
 import io.ohmvir.plugins.jenkinsaisynapse.api.output.*;
 import io.ohmvir.plugins.jenkinsaisynapse.utils.SecretsUtils;
-import io.ohmvir.plugins.ollamaclient.api.OllamaMessage;
-
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -67,14 +65,12 @@ public class OllamaClient extends ModelClient<OllamaModelSettings, OllamaClientS
 
             // Default Object / Map Target
             entry(Object.class, "object"),
-            entry(Map.class, "object")
-    );
+            entry(Map.class, "object"));
 
     private static final Map<String, ModelFinishReason> OLLAMA_FINISH_REASON_TO_MODEL_API = Map.of(
             "stop", ModelFinishReason.STOP,
             "length", ModelFinishReason.TOKEN_CAP,
-            "unload", ModelFinishReason.TOKEN_CAP
-    );
+            "unload", ModelFinishReason.TOKEN_CAP);
 
     @Override
     public List<ModelOutput> takeStepImpl(
@@ -109,13 +105,13 @@ public class OllamaClient extends ModelClient<OllamaModelSettings, OllamaClientS
                 }
 
                 case InputConversationContent conversationContent ->
-                        conversationContent.getConversation().getConversation().forEach(modelContent -> {
-                            if (modelContent instanceof InputTextContent textContent) {
-                                messages.add(createMessage("user", textContent.getText(), pendingImages));
-                            } else if (modelContent instanceof OutputTextContent textContent) {
-                                messages.add(createMessage("assistant", textContent.getText(), null));
-                            }
-                        });
+                    conversationContent.getConversation().getConversation().forEach(modelContent -> {
+                        if (modelContent instanceof InputTextContent textContent) {
+                            messages.add(createMessage("user", textContent.getText(), pendingImages));
+                        } else if (modelContent instanceof OutputTextContent textContent) {
+                            messages.add(createMessage("assistant", textContent.getText(), null));
+                        }
+                    });
 
                 case InputTextContent textContent -> {
                     messages.add(createMessage("user", textContent.getText(), pendingImages));
@@ -133,7 +129,8 @@ public class OllamaClient extends ModelClient<OllamaModelSettings, OllamaClientS
                     JsonObject toolCallResponseJson = new JsonObject();
                     toolCallResponseJson.addProperty("role", "tool");
                     toolCallResponseJson.addProperty("content", toolCallResponse.getResponseContent());
-                    toolCallResponseJson.addProperty("tool_name", toolCallResponse.getCalledTool().getName());
+                    toolCallResponseJson.addProperty(
+                            "tool_name", toolCallResponse.getCalledTool().getName());
                     messages.add(toolCallResponseJson);
                 }
 
@@ -165,7 +162,12 @@ public class OllamaClient extends ModelClient<OllamaModelSettings, OllamaClientS
                     } else if (thinkingLevelContent.getThinkingLevel() == ModelThinkingLevel.ON) {
                         apiReq.addProperty("think", true);
                     } else {
-                        apiReq.addProperty("think", thinkingLevelContent.getThinkingLevel().toString().toLowerCase());
+                        apiReq.addProperty(
+                                "think",
+                                thinkingLevelContent
+                                        .getThinkingLevel()
+                                        .toString()
+                                        .toLowerCase());
                     }
                 }
 
@@ -194,48 +196,68 @@ public class OllamaClient extends ModelClient<OllamaModelSettings, OllamaClientS
             HttpResponse<String> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200) {
                 Logger.getLogger(OllamaClient.class.getName())
-                        .log(Level.SEVERE, "Ollama API returned HTTP {0}: {1}", new Object[]{response.statusCode(), response.body()});
+                        .log(Level.SEVERE, "Ollama API returned HTTP {0}: {1}", new Object[] {
+                            response.statusCode(), response.body()
+                        });
                 return List.of();
             }
 
             JsonObject resJson = new Gson().fromJson(response.body(), JsonObject.class);
-            JsonObject messageObj = resJson.has("message") && !resJson.get("message").isJsonNull()
-                    ? resJson.getAsJsonObject("message")
-                    : new JsonObject();
+            JsonObject messageObj =
+                    resJson.has("message") && !resJson.get("message").isJsonNull()
+                            ? resJson.getAsJsonObject("message")
+                            : new JsonObject();
 
             List<ModelOutput> outputs = new ArrayList<>();
 
             request.getOutputClasses().forEach(outputClass -> {
                 switch (outputClass) {
-                    case Class<?> c when c == FinishReasonContent.class -> {
-                        if (resJson.has("done_reason") && !resJson.get("done_reason").isJsonNull()) {
+                    case Class<?> c
+                    when c == FinishReasonContent.class -> {
+                        if (resJson.has("done_reason")
+                                && !resJson.get("done_reason").isJsonNull()) {
                             String doneReason = resJson.get("done_reason").getAsString();
-                            outputs.add(new FinishReasonContent(
-                                    OLLAMA_FINISH_REASON_TO_MODEL_API.getOrDefault(doneReason, ModelFinishReason.STOP)));
+                            outputs.add(new FinishReasonContent(OLLAMA_FINISH_REASON_TO_MODEL_API.getOrDefault(
+                                    doneReason, ModelFinishReason.STOP)));
                         }
                     }
-                    case Class<?> c when c == OutputTextContent.class -> {
-                        if (messageObj.has("content") && !messageObj.get("content").isJsonNull()) {
-                            outputs.add(new OutputTextContent(messageObj.get("content").getAsString()));
+                    case Class<?> c
+                    when c == OutputTextContent.class -> {
+                        if (messageObj.has("content")
+                                && !messageObj.get("content").isJsonNull()) {
+                            outputs.add(new OutputTextContent(
+                                    messageObj.get("content").getAsString()));
                         }
                     }
-                    case Class<?> c when c == ThinkingContent.class -> {
-                        if (messageObj.has("thinking") && !messageObj.get("thinking").isJsonNull()) {
-                            outputs.add(new ThinkingContent(messageObj.get("thinking").getAsString()));
+                    case Class<?> c
+                    when c == ThinkingContent.class -> {
+                        if (messageObj.has("thinking")
+                                && !messageObj.get("thinking").isJsonNull()) {
+                            outputs.add(new ThinkingContent(
+                                    messageObj.get("thinking").getAsString()));
                         }
                     }
-                    case Class<?> c when c == TokenUtilizationContent.class -> {
-                        int promptTokens = resJson.has("prompt_eval_count") ? resJson.get("prompt_eval_count").getAsInt() : 0;
-                        int evalTokens = resJson.has("eval_count") ? resJson.get("eval_count").getAsInt() : 0;
+                    case Class<?> c
+                    when c == TokenUtilizationContent.class -> {
+                        int promptTokens = resJson.has("prompt_eval_count")
+                                ? resJson.get("prompt_eval_count").getAsInt()
+                                : 0;
+                        int evalTokens = resJson.has("eval_count")
+                                ? resJson.get("eval_count").getAsInt()
+                                : 0;
                         outputs.add(new TokenUtilizationContent(promptTokens, evalTokens, 0));
                     }
-                    case Class<?> c when c == ToolCallContent.class -> {
-                        if (messageObj.has("tool_calls") && messageObj.get("tool_calls").isJsonArray()) {
+                    case Class<?> c
+                    when c == ToolCallContent.class -> {
+                        if (messageObj.has("tool_calls")
+                                && messageObj.get("tool_calls").isJsonArray()) {
                             messageObj.getAsJsonArray("tool_calls").forEach(jsonElement -> {
                                 JsonObject fnObj = jsonElement.getAsJsonObject().getAsJsonObject("function");
                                 String toolName = fnObj.get("name").getAsString();
-                                JsonObject args = fnObj.has("arguments") ? fnObj.getAsJsonObject("arguments") : new JsonObject();
-                                outputs.add(new ToolCallContent(UUID.randomUUID().toString(), args, toolName));
+                                JsonObject args =
+                                        fnObj.has("arguments") ? fnObj.getAsJsonObject("arguments") : new JsonObject();
+                                outputs.add(
+                                        new ToolCallContent(UUID.randomUUID().toString(), args, toolName));
                             });
                         }
                     }
