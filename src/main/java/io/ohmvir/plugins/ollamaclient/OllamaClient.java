@@ -188,10 +188,20 @@ public class OllamaClient extends ModelClient<OllamaModelSettings, OllamaClientS
                 .build()) {
 
             String baseUrl = SecretsUtils.getSecretText(configuration.getApiBaseUrlCredentialsId(), null);
-            HttpRequest httpRequest = HttpRequest.newBuilder(URI.create(baseUrl + "/api/chat"))
+            HttpRequest.Builder httpBuilder = HttpRequest.newBuilder(URI.create(baseUrl + "/api/chat"))
                     .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(apiReq.toString()))
-                    .build();
+                    .POST(HttpRequest.BodyPublishers.ofString(apiReq.toString()));
+            if (OllamaClientSettings.get().isUsesCloudflareAccess()) {
+                httpBuilder.header(
+                        "CF-Access-Client-Id",
+                        SecretsUtils.getSecretText(
+                                OllamaClientSettings.get().getCloudflareAccessClientIdCredentialId(), null));
+                httpBuilder.header(
+                        "CF-Access-Client-Secret",
+                        SecretsUtils.getSecretText(
+                                OllamaClientSettings.get().getCloudflareAccessClientSecretCredentialId(), null));
+            }
+            HttpRequest httpRequest = httpBuilder.build();
 
             HttpResponse<String> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200) {

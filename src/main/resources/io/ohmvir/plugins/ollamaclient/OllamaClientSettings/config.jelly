@@ -8,5 +8,14 @@
         <f:entry title="${%Timeout Seconds}" description="${%How long to wait for the model to respond before giving up. 0 is considered infinite}" field="timeoutSeconds">
             <f:number />
         </f:entry>
+
+        <f:optionalBlock field="usesCloudflareAccess" title="${%Enable Cloudflare Access}" inline="true">
+            <f:entry title="${%Cloudflare Access Client Id}" field="cloudflareAccessClientIdCredentialId">
+                <f:select />
+            </f:entry>
+            <f:entry title="${%Cloudflare Access Client Secret}" field="cloudflareAccessClientSecretCredentialId">
+                <f:select />
+            </f:entry>
+        </f:optionalBlock>
     </f:section>
 </j:jelly>

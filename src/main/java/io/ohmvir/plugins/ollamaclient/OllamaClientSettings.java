@@ -1,31 +1,138 @@
 package io.ohmvir.plugins.ollamaclient;
 
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.common.StandardCredentials;
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import hudson.Extension;
+import hudson.model.Item;
+import hudson.security.ACL;
+import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
 import io.ohmvir.plugins.jenkinsaisynapse.configuration.client.ModelClientConfiguration;
+import java.util.Collections;
+import jenkins.model.GlobalConfiguration;
+import jenkins.model.Jenkins;
 import lombok.Getter;
+import org.jenkinsci.plugins.plaincredentials.StringCredentials;
 import org.jspecify.annotations.NonNull;
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.verb.POST;
 
 @Extension
 public class OllamaClientSettings extends ModelClientConfiguration {
     private @Getter final long keepAliveSeconds;
+    private @Getter final boolean usesCloudflareAccess;
+    private @Getter final String cloudflareAccessClientIdCredentialId;
+    private @Getter final String cloudflareAccessClientSecretCredentialId;
 
     public OllamaClientSettings() throws FormException {
         super(0L);
         keepAliveSeconds = 0L;
+        usesCloudflareAccess = false;
+        cloudflareAccessClientIdCredentialId = null;
+        cloudflareAccessClientSecretCredentialId = null;
     }
 
     @DataBoundConstructor
-    public OllamaClientSettings(long keepAliveSeconds, long timeoutSeconds) throws FormException {
+    public OllamaClientSettings(
+            long keepAliveSeconds,
+            long timeoutSeconds,
+            boolean usesCloudflareAccess,
+            String cloudflareAccessClientIdCredentialId,
+            String cloudflareAccessClientSecretCredentialId)
+            throws FormException {
         super(timeoutSeconds);
         if (keepAliveSeconds < 0) {
             throw new FormException("Keep alive seconds must be greater than or equal to zero", "keepAliveSeconds");
         }
         this.keepAliveSeconds = keepAliveSeconds;
+        this.usesCloudflareAccess = usesCloudflareAccess;
+        if (usesCloudflareAccess && cloudflareAccessClientIdCredentialId.isBlank()) {
+            throw new FormException(
+                    "Cloudflare access credentials must be specified", "cloudflareAccessClientIdCredentialId");
+        }
+        this.cloudflareAccessClientIdCredentialId = cloudflareAccessClientIdCredentialId;
+        if (usesCloudflareAccess && cloudflareAccessClientSecretCredentialId.isBlank()) {
+            throw new FormException(
+                    "Cloudflare access credentials must be specified", "cloudflareAccessClientSecretCredentialId");
+        }
+        this.cloudflareAccessClientSecretCredentialId = cloudflareAccessClientSecretCredentialId;
     }
 
     @Override
     public @NonNull String getDisplayName() {
         return "Ollama Client Settings";
+    }
+
+    public ListBoxModel doFillCloudflareAccessClientIdCredentialId(
+            @AncestorInPath Item context, @QueryParameter String cloudflareAccessClientIdCredentialId) {
+
+        if (context == null
+                ? !Jenkins.get().hasPermission(Jenkins.ADMINISTER)
+                : !context.hasPermission(Item.CONFIGURE)) {
+            return new StandardListBoxModel().includeCurrentValue(cloudflareAccessClientIdCredentialId);
+        }
+
+        return new StandardListBoxModel()
+                .includeEmptyValue()
+                .includeMatchingAs(
+                        ACL.SYSTEM2,
+                        context,
+                        StandardCredentials.class,
+                        Collections.emptyList(),
+                        CredentialsMatchers.instanceOf(StringCredentials.class));
+    }
+
+    public ListBoxModel doFillCloudflareAccessClientSecretCredentialId(
+            @AncestorInPath Item context, @QueryParameter String cloudflareAccessClientSecretCredentialId) {
+
+        if (context == null
+                ? !Jenkins.get().hasPermission(Jenkins.ADMINISTER)
+                : !context.hasPermission(Item.CONFIGURE)) {
+            return new StandardListBoxModel().includeCurrentValue(cloudflareAccessClientSecretCredentialId);
+        }
+
+        return new StandardListBoxModel()
+                .includeEmptyValue()
+                .includeMatchingAs(
+                        ACL.SYSTEM2,
+                        context,
+                        StandardCredentials.class,
+                        Collections.emptyList(),
+                        CredentialsMatchers.instanceOf(StringCredentials.class));
+    }
+
+    @POST
+    public FormValidation doCheckCloudflareAccessClientSecretCredentialId(
+            @QueryParameter String value, @QueryParameter boolean usesCloudflareAccess) {
+        if (!usesCloudflareAccess) {
+            return FormValidation.ok();
+        }
+        if (value.isEmpty()) {
+            return FormValidation.error(
+                    "Cloudflare Access Client Secret must be filled in if using cloudflare access",
+                    "cloudflareAccessClientSecretCredentialId");
+        }
+        return FormValidation.ok();
+    }
+
+    @POST
+    public FormValidation doCheckCloudflareAccessClientIdCredentialId(
+            @QueryParameter String value, @QueryParameter boolean usesCloudflareAccess) {
+        if (!usesCloudflareAccess) {
+            return FormValidation.ok();
+        }
+        if (value.isEmpty()) {
+            return FormValidation.error(
+                    "Cloudflare Access Client ID must be filled in if using cloudflare access",
+                    "cloudflareAccessClientIdCredentialId");
+        }
+        return FormValidation.ok();
+    }
+
+    public static OllamaClientSettings get() {
+        return GlobalConfiguration.all().get(OllamaClientSettings.class);
     }
 }
