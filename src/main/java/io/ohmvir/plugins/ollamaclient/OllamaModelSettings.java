@@ -65,39 +65,78 @@ public class OllamaModelSettings extends ModelConfiguration {
         public @NonNull String getDisplayName() {
             return "Ollama Model";
         }
+        @POST
+        public ListBoxModel doFillModelNameItems(@AncestorInPath Item context, @QueryParameter String apiBaseUrlCredentialId) {
+            // 1. Permission check (required for @POST handlers)
+            if (context == null ? !Jenkins.get().hasPermission(Jenkins.ADMINISTER) : !context.hasPermission(Item.CONFIGURE)) {
+                return new ListBoxModel();
+            }
 
-        public ListBoxModel doFillModelNameItems(@QueryParameter String apiBaseUrlCredentialId)
-                throws IOException, InterruptedException {
             if (apiBaseUrlCredentialId == null || apiBaseUrlCredentialId.trim().isEmpty()) {
                 return new ListBoxModel();
             }
-            HttpRequest.Builder modelsListReqBuilder = HttpRequest.newBuilder()
-                    .uri(URI.create(SecretsUtils.getSecretText(apiBaseUrlCredentialId, null) + MODELS_LIST_API_SUFFIX));
-            if (OllamaClientSettings.get().isUsesCloudflareAccess()) {
-                modelsListReqBuilder.header(
-                        "CF-Access-Client-Id",
-                        SecretsUtils.getSecretText(
-                                OllamaClientSettings.get().getCloudflareAccessClientIdCredentialId(), null));
-                modelsListReqBuilder.header(
-                        "CF-Access-Client-Secret",
-                        SecretsUtils.getSecretText(
-                                OllamaClientSettings.get().getCloudflareAccessClientSecretCredentialId(), null));
-            }
-            HttpRequest modelsListReq = modelsListReqBuilder.build();
-            HttpResponse<String> response = httpClient.send(modelsListReq, HttpResponse.BodyHandlers.ofString());
-            JsonObject resJson = JsonParser.parseString(response.body()).getAsJsonObject();
-            if (resJson.has("error")) {
+
+            try {
+                String baseUrl = SecretsUtils.getSecretText(apiBaseUrlCredentialId, context);
+                if (baseUrl == null || baseUrl.isBlank()) {
+                    return new ListBoxModel();
+                }
+
+                // Standardize URL concatenation to prevent invalid URIs
+                if (!baseUrl.endsWith("/")) {
+                    baseUrl += "/";
+                }
+                String suffix = MODELS_LIST_API_SUFFIX.startsWith("/") ? MODELS_LIST_API_SUFFIX.substring(1) : MODELS_LIST_API_SUFFIX;
+
+                HttpRequest.Builder modelsListReqBuilder = HttpRequest.newBuilder()
+                        .uri(URI.create(baseUrl + suffix))
+                        .GET();
+
+                // 2. Safely resolve Cloudflare Access Settings
+                OllamaClientSettings settings = OllamaClientSettings.get();
+                if (settings != null && settings.isUsesCloudflareAccess()) {
+                    String clientId = SecretsUtils.getSecretText(settings.getCloudflareAccessClientIdCredentialId(), context);
+                    String clientSecret = SecretsUtils.getSecretText(settings.getCloudflareAccessClientSecretCredentialId(), context);
+
+                    if (clientId != null && clientSecret != null) {
+                        modelsListReqBuilder.header("CF-Access-Client-Id", clientId);
+                        modelsListReqBuilder.header("CF-Access-Client-Secret", clientSecret);
+                    }
+                }
+
+                HttpRequest modelsListReq = modelsListReqBuilder.build();
+                HttpResponse<String> response = httpClient.send(modelsListReq, HttpResponse.BodyHandlers.ofString());
+
+                // 3. Handle non-200 HTTP responses safely
+                if (response.statusCode() != 200 || response.body() == null || response.body().isBlank()) {
+                    return new ListBoxModel();
+                }
+
+                JsonObject resJson = JsonParser.parseString(response.body()).getAsJsonObject();
+                if (resJson.has("error") || !resJson.has("models") || !resJson.get("models").isJsonArray()) {
+                    return new ListBoxModel();
+                }
+
+                ListBoxModel models = new ListBoxModel();
+                resJson.getAsJsonArray("models").forEach(element -> {
+                    if (element.isJsonObject()) {
+                        JsonObject modelObj = element.getAsJsonObject();
+                        String name = modelObj.has("name") ? modelObj.get("name").getAsString() : "";
+                        String model = modelObj.has("model") ? modelObj.get("model").getAsString() : name;
+                        if (!name.isEmpty()) {
+                            models.add(name, model);
+                        }
+                    }
+                });
+
+                return models;
+            } catch (Exception e) {
+                // Prevent Jenkins UI crashes during dynamic field population
                 return new ListBoxModel();
             }
-            ListBoxModel models = new ListBoxModel();
-            resJson.get("models")
-                    .getAsJsonArray()
-                    .forEach(model -> models.add(
-                            model.getAsJsonObject().get("name").getAsString(),
-                            model.getAsJsonObject().get("model").getAsString()));
-            return models;
         }
 
+        @POST
         public ListBoxModel doFillApiBaseUrlCredentialIdItems(
                 @AncestorInPath Item context, @QueryParameter String apiBaseUrlCredentialId) {
 
@@ -118,13 +157,21 @@ public class OllamaModelSettings extends ModelConfiguration {
         }
 
         @POST
-        public FormValidation doCheckApiBaseUrlCredentialId(@QueryParameter String value) {
+        public FormValidation doCheckApiBaseUrlCredentialId(
+                @AncestorInPath Item context, @QueryParameter String value) {
+            // 4. Added permission check and passed context to credential lookup
+            if (context == null ? !Jenkins.get().hasPermission(Jenkins.ADMINISTER) : !context.hasPermission(Item.CONFIGURE)) {
+                return FormValidation.ok();
+            }
+
             if (value == null || value.trim().isEmpty()) {
                 return FormValidation.error("API Base URL is required");
             }
-            if (SecretsUtils.getSecretText(value, null) == null) {
+
+            if (SecretsUtils.getSecretText(value, context) == null) {
                 return FormValidation.error("API Base URL does not resolve to a string credential");
             }
+
             return FormValidation.ok();
         }
     }
