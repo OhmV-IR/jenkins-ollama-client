@@ -31,21 +31,13 @@ import org.kohsuke.stapler.verb.POST;
 
 @Extension
 public class OllamaModelSettings extends ModelConfiguration {
-    private final @Getter String apiBaseUrlCredentialsId;
-
     public OllamaModelSettings() throws Descriptor.FormException {
         super("", "");
-        apiBaseUrlCredentialsId = null;
     }
 
     @DataBoundConstructor
-    public OllamaModelSettings(String modelName, String apiBaseUrlCredentialsId) throws Descriptor.FormException {
+    public OllamaModelSettings(String modelName) throws Descriptor.FormException {
         super(modelName, modelName);
-        if (SecretsUtils.getSecretText(apiBaseUrlCredentialsId, null) == null) {
-            throw new Descriptor.FormException(
-                    "apiUrlCredentialId does not resolve to a valid string credential", "apiUrlCredentialId");
-        }
-        this.apiBaseUrlCredentialsId = apiBaseUrlCredentialsId;
     }
 
     @Override
@@ -68,7 +60,7 @@ public class OllamaModelSettings extends ModelConfiguration {
 
         @POST
         public ListBoxModel doFillModelNameItems(
-                @AncestorInPath Item context, @QueryParameter String apiBaseUrlCredentialId) {
+                @AncestorInPath Item context) {
             // 1. Permission check (required for @POST handlers)
             if (context == null
                     ? !Jenkins.get().hasPermission(Jenkins.ADMINISTER)
@@ -76,12 +68,12 @@ public class OllamaModelSettings extends ModelConfiguration {
                 return new ListBoxModel();
             }
 
-            if (apiBaseUrlCredentialId == null || apiBaseUrlCredentialId.trim().isEmpty()) {
+            if (OllamaClientSettings.get().getApiBaseUrlCredentialsId() == null || OllamaClientSettings.get().getApiBaseUrlCredentialsId().trim().isEmpty()) {
                 return new ListBoxModel();
             }
 
             try {
-                String baseUrl = SecretsUtils.getSecretText(apiBaseUrlCredentialId, context);
+                String baseUrl = SecretsUtils.getSecretText(OllamaClientSettings.get().getApiBaseUrlCredentialsId(), context);
                 if (baseUrl == null || baseUrl.isBlank()) {
                     return new ListBoxModel();
                 }
@@ -148,47 +140,6 @@ public class OllamaModelSettings extends ModelConfiguration {
                 // Prevent Jenkins UI crashes during dynamic field population
                 return new ListBoxModel();
             }
-        }
-
-        @POST
-        public ListBoxModel doFillApiBaseUrlCredentialsIdItems(
-                @AncestorInPath Item context, @QueryParameter String apiBaseUrlCredentialId) {
-
-            if (context == null
-                    ? !Jenkins.get().hasPermission(Jenkins.ADMINISTER)
-                    : !context.hasPermission(Item.CONFIGURE)) {
-                return new StandardListBoxModel().includeCurrentValue(apiBaseUrlCredentialId);
-            }
-
-            return new StandardListBoxModel()
-                    .includeEmptyValue()
-                    .includeMatchingAs(
-                            ACL.SYSTEM2,
-                            context,
-                            StandardCredentials.class,
-                            Collections.emptyList(),
-                            CredentialsMatchers.instanceOf(StringCredentials.class));
-        }
-
-        @POST
-        public FormValidation doCheckApiBaseUrlCredentialId(
-                @AncestorInPath Item context, @QueryParameter String value) {
-            // 4. Added permission check and passed context to credential lookup
-            if (context == null
-                    ? !Jenkins.get().hasPermission(Jenkins.ADMINISTER)
-                    : !context.hasPermission(Item.CONFIGURE)) {
-                return FormValidation.ok();
-            }
-
-            if (value == null || value.trim().isEmpty()) {
-                return FormValidation.error("API Base URL is required");
-            }
-
-            if (SecretsUtils.getSecretText(value, context) == null) {
-                return FormValidation.error("API Base URL does not resolve to a string credential");
-            }
-
-            return FormValidation.ok();
         }
     }
 }

@@ -34,7 +34,7 @@ public class OllamaModelDataRetriever extends ModelDataRetriever<OllamaModelSett
             throws IOException, InterruptedException {
         ModelData ret = new ModelData(configuration);
         HttpRequest modelDetailsReq = HttpRequest.newBuilder()
-                .uri(URI.create(SecretsUtils.getSecretText(configuration.getApiBaseUrlCredentialsId(), null)
+                .uri(URI.create(SecretsUtils.getSecretText(OllamaClientSettings.get().getApiBaseUrlCredentialsId(), null)
                         + RETRIEVE_MODEL_INFO_SUFFIX))
                 .POST(HttpRequest.BodyPublishers.ofString(
                         String.format("{\"model\":\"%s\",\"verbose\":true}", configuration.getModelName())))

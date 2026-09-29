@@ -10,6 +10,8 @@ import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import io.ohmvir.plugins.jenkinsaisynapse.configuration.client.ModelClientConfiguration;
 import java.util.Collections;
+
+import io.ohmvir.plugins.jenkinsaisynapse.utils.SecretsUtils;
 import jenkins.model.GlobalConfiguration;
 import jenkins.model.Jenkins;
 import lombok.Getter;
@@ -24,6 +26,7 @@ import org.kohsuke.stapler.verb.POST;
 public class OllamaClientSettings extends ModelClientConfiguration {
     private @Getter final long keepAliveSeconds;
     private @Getter final boolean usesCloudflareAccess;
+    private @Getter final String apiBaseUrlCredentialsId;
     private @Getter final String cloudflareAccessClientIdCredentialId;
     private @Getter final String cloudflareAccessClientSecretCredentialId;
 
@@ -33,12 +36,14 @@ public class OllamaClientSettings extends ModelClientConfiguration {
         usesCloudflareAccess = false;
         cloudflareAccessClientIdCredentialId = null;
         cloudflareAccessClientSecretCredentialId = null;
+        apiBaseUrlCredentialsId = null;
     }
 
     @DataBoundConstructor
     public OllamaClientSettings(
             long keepAliveSeconds,
             long timeoutSeconds,
+            String apiBaseUrlCredentialsId,
             boolean usesCloudflareAccess,
             String cloudflareAccessClientIdCredentialId,
             String cloudflareAccessClientSecretCredentialId)
@@ -59,6 +64,10 @@ public class OllamaClientSettings extends ModelClientConfiguration {
                     "Cloudflare access credentials must be specified", "cloudflareAccessClientSecretCredentialId");
         }
         this.cloudflareAccessClientSecretCredentialId = cloudflareAccessClientSecretCredentialId;
+        if(apiBaseUrlCredentialsId.trim().isEmpty()){
+            throw new FormException("Ollama base api url should not be empty", "apiBaseUrlCredentialsId");
+        }
+        this.apiBaseUrlCredentialsId = apiBaseUrlCredentialsId;
     }
 
     @Override
@@ -84,6 +93,47 @@ public class OllamaClientSettings extends ModelClientConfiguration {
                         StandardCredentials.class,
                         Collections.emptyList(),
                         CredentialsMatchers.instanceOf(StringCredentials.class));
+    }
+
+    @POST
+    public ListBoxModel doFillApiBaseUrlCredentialsIdItems(
+            @AncestorInPath Item context, @QueryParameter String apiBaseUrlCredentialId) {
+
+        if (context == null
+                ? !Jenkins.get().hasPermission(Jenkins.ADMINISTER)
+                : !context.hasPermission(Item.CONFIGURE)) {
+            return new StandardListBoxModel().includeCurrentValue(apiBaseUrlCredentialId);
+        }
+
+        return new StandardListBoxModel()
+                .includeEmptyValue()
+                .includeMatchingAs(
+                        ACL.SYSTEM2,
+                        context,
+                        StandardCredentials.class,
+                        Collections.emptyList(),
+                        CredentialsMatchers.instanceOf(StringCredentials.class));
+    }
+
+    @POST
+    public FormValidation doCheckApiBaseUrlCredentialId(
+            @AncestorInPath Item context, @QueryParameter String value) {
+        // 4. Added permission check and passed context to credential lookup
+        if (context == null
+                ? !Jenkins.get().hasPermission(Jenkins.ADMINISTER)
+                : !context.hasPermission(Item.CONFIGURE)) {
+            return FormValidation.ok();
+        }
+
+        if (value == null || value.trim().isEmpty()) {
+            return FormValidation.error("API Base URL is required");
+        }
+
+        if (SecretsUtils.getSecretText(value, context) == null) {
+            return FormValidation.error("API Base URL does not resolve to a string credential");
+        }
+
+        return FormValidation.ok();
     }
 
     @POST

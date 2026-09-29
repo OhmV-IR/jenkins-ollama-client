@@ -8,6 +8,9 @@
         <f:entry title="${%Timeout Seconds}" description="${%How long to wait for the model to respond before giving up. 0 is considered infinite}" field="timeoutSeconds">
             <f:number />
         </f:entry>
+        <f:entry title="${%API Base URL}" field="apiBaseUrlCredentialsId">
+            <c:select />
+        </f:entry>
 
         <f:optionalBlock field="usesCloudflareAccess" title="${%Enable Cloudflare Access}" inline="true">
             <f:entry title="${%Cloudflare Access Client Id}" field="cloudflareAccessClientIdCredentialId">

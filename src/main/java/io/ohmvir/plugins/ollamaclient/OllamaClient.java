@@ -187,7 +187,7 @@ public class OllamaClient extends ModelClient<OllamaModelSettings, OllamaClientS
                 .connectTimeout(Duration.ofSeconds(clientConfiguration.getTimeoutSeconds()))
                 .build()) {
 
-            String baseUrl = SecretsUtils.getSecretText(configuration.getApiBaseUrlCredentialsId(), null);
+            String baseUrl = SecretsUtils.getSecretText(clientConfiguration.getApiBaseUrlCredentialsId(), null);
             HttpRequest.Builder httpBuilder = HttpRequest.newBuilder(URI.create(baseUrl + "/api/chat"))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(apiReq.toString()));
