@@ -151,7 +151,7 @@ public class OllamaModelSettings extends ModelConfiguration {
         }
 
         @POST
-        public ListBoxModel doFillApiBaseUrlCredentialIdItems(
+        public ListBoxModel doFillApiBaseUrlCredentialsIdItems(
                 @AncestorInPath Item context, @QueryParameter String apiBaseUrlCredentialId) {
 
             if (context == null
