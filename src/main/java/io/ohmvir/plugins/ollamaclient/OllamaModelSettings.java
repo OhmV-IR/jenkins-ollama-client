@@ -1,15 +1,10 @@
 package io.ohmvir.plugins.ollamaclient;
 
-import com.cloudbees.plugins.credentials.CredentialsMatchers;
-import com.cloudbees.plugins.credentials.common.StandardCredentials;
-import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Item;
-import hudson.security.ACL;
-import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import io.ohmvir.plugins.jenkinsaisynapse.configuration.models.ModelConfiguration;
 import io.ohmvir.plugins.jenkinsaisynapse.utils.SecretsUtils;
@@ -19,14 +14,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.Collections;
 import jenkins.model.Jenkins;
-import lombok.Getter;
-import org.jenkinsci.plugins.plaincredentials.StringCredentials;
 import org.jspecify.annotations.NonNull;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.verb.POST;
 
 @Extension
@@ -59,8 +50,7 @@ public class OllamaModelSettings extends ModelConfiguration {
         }
 
         @POST
-        public ListBoxModel doFillModelNameItems(
-                @AncestorInPath Item context) {
+        public ListBoxModel doFillModelNameItems(@AncestorInPath Item context) {
             // 1. Permission check (required for @POST handlers)
             if (context == null
                     ? !Jenkins.get().hasPermission(Jenkins.ADMINISTER)
@@ -68,12 +58,17 @@ public class OllamaModelSettings extends ModelConfiguration {
                 return new ListBoxModel();
             }
 
-            if (OllamaClientSettings.get().getApiBaseUrlCredentialsId() == null || OllamaClientSettings.get().getApiBaseUrlCredentialsId().trim().isEmpty()) {
+            if (OllamaClientSettings.get().getApiBaseUrlCredentialsId() == null
+                    || OllamaClientSettings.get()
+                            .getApiBaseUrlCredentialsId()
+                            .trim()
+                            .isEmpty()) {
                 return new ListBoxModel();
             }
 
             try {
-                String baseUrl = SecretsUtils.getSecretText(OllamaClientSettings.get().getApiBaseUrlCredentialsId(), context);
+                String baseUrl =
+                        SecretsUtils.getSecretText(OllamaClientSettings.get().getApiBaseUrlCredentialsId(), context);
                 if (baseUrl == null || baseUrl.isBlank()) {
                     return new ListBoxModel();
                 }

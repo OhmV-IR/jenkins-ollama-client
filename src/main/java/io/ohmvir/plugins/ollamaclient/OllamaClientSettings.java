@@ -9,9 +9,8 @@ import hudson.security.ACL;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import io.ohmvir.plugins.jenkinsaisynapse.configuration.client.ModelClientConfiguration;
-import java.util.Collections;
-
 import io.ohmvir.plugins.jenkinsaisynapse.utils.SecretsUtils;
+import java.util.Collections;
 import jenkins.model.GlobalConfiguration;
 import jenkins.model.Jenkins;
 import lombok.Getter;
@@ -64,7 +63,7 @@ public class OllamaClientSettings extends ModelClientConfiguration {
                     "Cloudflare access credentials must be specified", "cloudflareAccessClientSecretCredentialId");
         }
         this.cloudflareAccessClientSecretCredentialId = cloudflareAccessClientSecretCredentialId;
-        if(apiBaseUrlCredentialsId.trim().isEmpty()){
+        if (apiBaseUrlCredentialsId.trim().isEmpty()) {
             throw new FormException("Ollama base api url should not be empty", "apiBaseUrlCredentialsId");
         }
         this.apiBaseUrlCredentialsId = apiBaseUrlCredentialsId;
@@ -116,8 +115,7 @@ public class OllamaClientSettings extends ModelClientConfiguration {
     }
 
     @POST
-    public FormValidation doCheckApiBaseUrlCredentialId(
-            @AncestorInPath Item context, @QueryParameter String value) {
+    public FormValidation doCheckApiBaseUrlCredentialId(@AncestorInPath Item context, @QueryParameter String value) {
         // 4. Added permission check and passed context to credential lookup
         if (context == null
                 ? !Jenkins.get().hasPermission(Jenkins.ADMINISTER)
