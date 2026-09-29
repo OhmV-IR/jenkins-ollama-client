@@ -66,6 +66,7 @@ public class OllamaClientSettings extends ModelClientConfiguration {
         return "Ollama Client Settings";
     }
 
+    @POST
     public ListBoxModel doFillCloudflareAccessClientIdCredentialId(
             @AncestorInPath Item context, @QueryParameter String cloudflareAccessClientIdCredentialId) {
 
@@ -85,6 +86,7 @@ public class OllamaClientSettings extends ModelClientConfiguration {
                         CredentialsMatchers.instanceOf(StringCredentials.class));
     }
 
+    @POST
     public ListBoxModel doFillCloudflareAccessClientSecretCredentialId(
             @AncestorInPath Item context, @QueryParameter String cloudflareAccessClientSecretCredentialId) {
 
