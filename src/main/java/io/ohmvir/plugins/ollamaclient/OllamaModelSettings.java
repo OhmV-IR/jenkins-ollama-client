@@ -65,10 +65,14 @@ public class OllamaModelSettings extends ModelConfiguration {
         public @NonNull String getDisplayName() {
             return "Ollama Model";
         }
+
         @POST
-        public ListBoxModel doFillModelNameItems(@AncestorInPath Item context, @QueryParameter String apiBaseUrlCredentialId) {
+        public ListBoxModel doFillModelNameItems(
+                @AncestorInPath Item context, @QueryParameter String apiBaseUrlCredentialId) {
             // 1. Permission check (required for @POST handlers)
-            if (context == null ? !Jenkins.get().hasPermission(Jenkins.ADMINISTER) : !context.hasPermission(Item.CONFIGURE)) {
+            if (context == null
+                    ? !Jenkins.get().hasPermission(Jenkins.ADMINISTER)
+                    : !context.hasPermission(Item.CONFIGURE)) {
                 return new ListBoxModel();
             }
 
@@ -86,7 +90,9 @@ public class OllamaModelSettings extends ModelConfiguration {
                 if (!baseUrl.endsWith("/")) {
                     baseUrl += "/";
                 }
-                String suffix = MODELS_LIST_API_SUFFIX.startsWith("/") ? MODELS_LIST_API_SUFFIX.substring(1) : MODELS_LIST_API_SUFFIX;
+                String suffix = MODELS_LIST_API_SUFFIX.startsWith("/")
+                        ? MODELS_LIST_API_SUFFIX.substring(1)
+                        : MODELS_LIST_API_SUFFIX;
 
                 HttpRequest.Builder modelsListReqBuilder = HttpRequest.newBuilder()
                         .uri(URI.create(baseUrl + suffix))
@@ -95,8 +101,10 @@ public class OllamaModelSettings extends ModelConfiguration {
                 // 2. Safely resolve Cloudflare Access Settings
                 OllamaClientSettings settings = OllamaClientSettings.get();
                 if (settings != null && settings.isUsesCloudflareAccess()) {
-                    String clientId = SecretsUtils.getSecretText(settings.getCloudflareAccessClientIdCredentialId(), context);
-                    String clientSecret = SecretsUtils.getSecretText(settings.getCloudflareAccessClientSecretCredentialId(), context);
+                    String clientId =
+                            SecretsUtils.getSecretText(settings.getCloudflareAccessClientIdCredentialId(), context);
+                    String clientSecret =
+                            SecretsUtils.getSecretText(settings.getCloudflareAccessClientSecretCredentialId(), context);
 
                     if (clientId != null && clientSecret != null) {
                         modelsListReqBuilder.header("CF-Access-Client-Id", clientId);
@@ -108,12 +116,16 @@ public class OllamaModelSettings extends ModelConfiguration {
                 HttpResponse<String> response = httpClient.send(modelsListReq, HttpResponse.BodyHandlers.ofString());
 
                 // 3. Handle non-200 HTTP responses safely
-                if (response.statusCode() != 200 || response.body() == null || response.body().isBlank()) {
+                if (response.statusCode() != 200
+                        || response.body() == null
+                        || response.body().isBlank()) {
                     return new ListBoxModel();
                 }
 
                 JsonObject resJson = JsonParser.parseString(response.body()).getAsJsonObject();
-                if (resJson.has("error") || !resJson.has("models") || !resJson.get("models").isJsonArray()) {
+                if (resJson.has("error")
+                        || !resJson.has("models")
+                        || !resJson.get("models").isJsonArray()) {
                     return new ListBoxModel();
                 }
 
@@ -121,8 +133,10 @@ public class OllamaModelSettings extends ModelConfiguration {
                 resJson.getAsJsonArray("models").forEach(element -> {
                     if (element.isJsonObject()) {
                         JsonObject modelObj = element.getAsJsonObject();
-                        String name = modelObj.has("name") ? modelObj.get("name").getAsString() : "";
-                        String model = modelObj.has("model") ? modelObj.get("model").getAsString() : name;
+                        String name =
+                                modelObj.has("name") ? modelObj.get("name").getAsString() : "";
+                        String model =
+                                modelObj.has("model") ? modelObj.get("model").getAsString() : name;
                         if (!name.isEmpty()) {
                             models.add(name, model);
                         }
@@ -130,7 +144,7 @@ public class OllamaModelSettings extends ModelConfiguration {
                 });
 
                 return models;
-            } catch (Exception e) {
+            } catch (IOException | InterruptedException e) {
                 // Prevent Jenkins UI crashes during dynamic field population
                 return new ListBoxModel();
             }
@@ -160,7 +174,9 @@ public class OllamaModelSettings extends ModelConfiguration {
         public FormValidation doCheckApiBaseUrlCredentialId(
                 @AncestorInPath Item context, @QueryParameter String value) {
             // 4. Added permission check and passed context to credential lookup
-            if (context == null ? !Jenkins.get().hasPermission(Jenkins.ADMINISTER) : !context.hasPermission(Item.CONFIGURE)) {
+            if (context == null
+                    ? !Jenkins.get().hasPermission(Jenkins.ADMINISTER)
+                    : !context.hasPermission(Item.CONFIGURE)) {
                 return FormValidation.ok();
             }
 
