@@ -68,9 +68,16 @@ public class OllamaModelSettings extends ModelConfiguration {
 
         public ListBoxModel doFillModelNameItems(@QueryParameter String apiBaseUrlCredentialId)
                 throws IOException, InterruptedException {
-            HttpRequest modelsListReq = HttpRequest.newBuilder()
-                    .uri(URI.create(SecretsUtils.getSecretText(apiBaseUrlCredentialId, null) + MODELS_LIST_API_SUFFIX))
-                    .build();
+            if(apiBaseUrlCredentialId == null || apiBaseUrlCredentialId.trim().isEmpty()){
+                return new ListBoxModel();
+            }
+            HttpRequest.Builder modelsListReqBuilder = HttpRequest.newBuilder()
+                    .uri(URI.create(SecretsUtils.getSecretText(apiBaseUrlCredentialId, null) + MODELS_LIST_API_SUFFIX));
+            if(OllamaClientSettings.get().isUsesCloudflareAccess()){
+                modelsListReqBuilder.header("CF-Access-Client-Id", SecretsUtils.getSecretText(OllamaClientSettings.get().getCloudflareAccessClientIdCredentialId(), null));
+                modelsListReqBuilder.header("CF-Access-Client-Secret", SecretsUtils.getSecretText(OllamaClientSettings.get().getCloudflareAccessClientSecretCredentialId(), null));
+            }
+            HttpRequest modelsListReq = modelsListReqBuilder.build();
             HttpResponse<String> response = httpClient.send(modelsListReq, HttpResponse.BodyHandlers.ofString());
             JsonObject resJson = JsonParser.parseString(response.body()).getAsJsonObject();
             if (resJson.has("error")) {
