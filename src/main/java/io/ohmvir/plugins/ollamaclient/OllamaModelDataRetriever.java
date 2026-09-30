@@ -33,13 +33,17 @@ public class OllamaModelDataRetriever extends ModelDataRetriever<OllamaModelSett
     public ModelData retrieveFromConfiguration(OllamaModelSettings configuration)
             throws IOException, InterruptedException {
         ModelData ret = new ModelData(configuration);
-        HttpRequest modelDetailsReq = HttpRequest.newBuilder()
+        HttpRequest.Builder modelDetailsReqBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(
                         SecretsUtils.getSecretText(OllamaClientSettings.get().getApiBaseUrlCredentialsId(), null)
                                 + RETRIEVE_MODEL_INFO_SUFFIX))
                 .POST(HttpRequest.BodyPublishers.ofString(
-                        String.format("{\"model\":\"%s\",\"verbose\":true}", configuration.getModelName())))
-                .build();
+                        String.format("{\"model\":\"%s\",\"verbose\":true}", configuration.getModelName())));
+        if(OllamaClientSettings.get().isUsesCloudflareAccess()){
+            modelDetailsReqBuilder.header("CF-Access-Client-Id", SecretsUtils.getSecretText(OllamaClientSettings.get().getCloudflareAccessClientIdCredentialId(), null));
+            modelDetailsReqBuilder.header("CF-Access-Client-Secret", SecretsUtils.getSecretText(OllamaClientSettings.get().getCloudflareAccessClientSecretCredentialId(), null));
+        }
+        HttpRequest modelDetailsReq = modelDetailsReqBuilder.build();
         HttpResponse<String> res = httpClient.send(modelDetailsReq, HttpResponse.BodyHandlers.ofString());
         JsonObject resJson = JsonParser.parseString(res.body()).getAsJsonObject();
         Set<String> capabilities = resJson.getAsJsonArray("capabilities").asList().stream()
