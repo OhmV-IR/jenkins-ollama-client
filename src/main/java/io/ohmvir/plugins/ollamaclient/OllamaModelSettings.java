@@ -18,9 +18,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import jenkins.model.Jenkins;
-import jline.internal.Log;
 import org.jspecify.annotations.NonNull;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -89,8 +87,10 @@ public class OllamaModelSettings extends ModelConfiguration {
                         .GET();
 
                 if (settings.isUsesCloudflareAccess()) {
-                    String clientId = SecretsUtils.getSecretText(settings.getCloudflareAccessClientIdCredentialId(), context);
-                    String clientSecret = SecretsUtils.getSecretText(settings.getCloudflareAccessClientSecretCredentialId(), context);
+                    String clientId =
+                            SecretsUtils.getSecretText(settings.getCloudflareAccessClientIdCredentialId(), context);
+                    String clientSecret =
+                            SecretsUtils.getSecretText(settings.getCloudflareAccessClientSecretCredentialId(), context);
 
                     if (clientId != null && clientSecret != null) {
                         modelsListReqBuilder.header("CF-Access-Client-Id", clientId);
@@ -101,7 +101,9 @@ public class OllamaModelSettings extends ModelConfiguration {
                 HttpRequest modelsListReq = modelsListReqBuilder.build();
                 HttpResponse<String> response = httpClient.send(modelsListReq, HttpResponse.BodyHandlers.ofString());
 
-                if (response.statusCode() != 200 || response.body() == null || response.body().isBlank()) {
+                if (response.statusCode() != 200
+                        || response.body() == null
+                        || response.body().isBlank()) {
                     return new ListBoxModel();
                 }
 
@@ -112,7 +114,9 @@ public class OllamaModelSettings extends ModelConfiguration {
                 }
 
                 JsonObject resJson = jsonElement.getAsJsonObject();
-                if (resJson.has("error") || !resJson.has("models") || !resJson.get("models").isJsonArray()) {
+                if (resJson.has("error")
+                        || !resJson.has("models")
+                        || !resJson.get("models").isJsonArray()) {
                     Logger.getLogger(OllamaModelSettings.class.getName()).log(Level.WARNING, "JSON prop is missing");
                     return new ListBoxModel();
                 }
@@ -121,8 +125,10 @@ public class OllamaModelSettings extends ModelConfiguration {
                 resJson.getAsJsonArray("models").forEach(element -> {
                     if (element.isJsonObject()) {
                         JsonObject modelObj = element.getAsJsonObject();
-                        String name = modelObj.has("name") ? modelObj.get("name").getAsString() : "";
-                        String model = modelObj.has("model") ? modelObj.get("model").getAsString() : name;
+                        String name =
+                                modelObj.has("name") ? modelObj.get("name").getAsString() : "";
+                        String model =
+                                modelObj.has("model") ? modelObj.get("model").getAsString() : name;
                         if (!name.isEmpty()) {
                             models.add(name, model);
                         }

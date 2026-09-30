@@ -39,9 +39,15 @@ public class OllamaModelDataRetriever extends ModelDataRetriever<OllamaModelSett
                                 + RETRIEVE_MODEL_INFO_SUFFIX))
                 .POST(HttpRequest.BodyPublishers.ofString(
                         String.format("{\"model\":\"%s\",\"verbose\":true}", configuration.getModelName())));
-        if(OllamaClientSettings.get().isUsesCloudflareAccess()){
-            modelDetailsReqBuilder.header("CF-Access-Client-Id", SecretsUtils.getSecretText(OllamaClientSettings.get().getCloudflareAccessClientIdCredentialId(), null));
-            modelDetailsReqBuilder.header("CF-Access-Client-Secret", SecretsUtils.getSecretText(OllamaClientSettings.get().getCloudflareAccessClientSecretCredentialId(), null));
+        if (OllamaClientSettings.get().isUsesCloudflareAccess()) {
+            modelDetailsReqBuilder.header(
+                    "CF-Access-Client-Id",
+                    SecretsUtils.getSecretText(
+                            OllamaClientSettings.get().getCloudflareAccessClientIdCredentialId(), null));
+            modelDetailsReqBuilder.header(
+                    "CF-Access-Client-Secret",
+                    SecretsUtils.getSecretText(
+                            OllamaClientSettings.get().getCloudflareAccessClientSecretCredentialId(), null));
         }
         HttpRequest modelDetailsReq = modelDetailsReqBuilder.build();
         HttpResponse<String> res = httpClient.send(modelDetailsReq, HttpResponse.BodyHandlers.ofString());
