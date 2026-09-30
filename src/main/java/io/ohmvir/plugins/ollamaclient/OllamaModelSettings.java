@@ -119,16 +119,16 @@ public class OllamaModelSettings extends ModelConfiguration {
 
                 String endpointDescription = endpoint.getHost() + endpoint.getPath();
                 if (response.statusCode() != 200) {
-                    LOGGER.log(
-                            Level.WARNING,
-                            "Ollama model-list request to {0} returned HTTP {1}: {2}",
-                            new Object[] {
-                                endpointDescription, response.statusCode(), responseExcerpt(response.body())
-                            });
+                    LOGGER.log(Level.WARNING, "Ollama model-list request to {0} returned HTTP {1}: {2}", new Object[] {
+                        endpointDescription, response.statusCode(), responseExcerpt(response.body())
+                    });
                     return new ListBoxModel();
                 }
                 if (response.body() == null || response.body().isBlank()) {
-                    LOGGER.log(Level.WARNING, "Ollama model-list request to {0} returned an empty response body", endpointDescription);
+                    LOGGER.log(
+                            Level.WARNING,
+                            "Ollama model-list request to {0} returned an empty response body",
+                            endpointDescription);
                     return new ListBoxModel();
                 }
 
@@ -153,9 +153,10 @@ public class OllamaModelSettings extends ModelConfiguration {
                 JsonObject resJson = jsonElement.getAsJsonObject();
                 if (resJson.has("error")) {
                     LOGGER.log(
-                            Level.WARNING,
-                            "Ollama model-list endpoint {0} returned an API error: {1}",
-                            new Object[] {endpointDescription, responseExcerpt(resJson.get("error").toString())});
+                            Level.WARNING, "Ollama model-list endpoint {0} returned an API error: {1}", new Object[] {
+                                endpointDescription,
+                                responseExcerpt(resJson.get("error").toString())
+                            });
                     return new ListBoxModel();
                 }
                 if (!resJson.has("models") || !resJson.get("models").isJsonArray()) {
@@ -181,7 +182,8 @@ public class OllamaModelSettings extends ModelConfiguration {
                 });
 
                 if (models.isEmpty()) {
-                    LOGGER.log(Level.INFO, "Ollama model-list endpoint {0} returned no named models", endpointDescription);
+                    LOGGER.log(
+                            Level.INFO, "Ollama model-list endpoint {0} returned no named models", endpointDescription);
                 }
                 return models;
             } catch (InterruptedException e) {
