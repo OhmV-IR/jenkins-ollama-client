@@ -43,6 +43,7 @@ public class OllamaModelSettings extends ModelConfiguration {
     @Extension
     public static class DescriptorImpl extends Descriptor<ModelConfiguration> {
         private static final String MODELS_LIST_API_SUFFIX = "/api/tags";
+        private static final Logger LOGGER = Logger.getLogger(OllamaModelSettings.class.getName());
         private static final HttpClient httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .followRedirects(HttpClient.Redirect.NORMAL)
@@ -51,6 +52,25 @@ public class OllamaModelSettings extends ModelConfiguration {
         @Override
         public @NonNull String getDisplayName() {
             return "Ollama Model";
+        }
+
+        static URI buildModelsListUri(String baseUrl) {
+            String normalizedBaseUrl = baseUrl.trim();
+            while (normalizedBaseUrl.endsWith("/")) {
+                normalizedBaseUrl = normalizedBaseUrl.substring(0, normalizedBaseUrl.length() - 1);
+            }
+            if (normalizedBaseUrl.endsWith("/api")) {
+                normalizedBaseUrl = normalizedBaseUrl.substring(0, normalizedBaseUrl.length() - 4);
+            }
+            return URI.create(normalizedBaseUrl + MODELS_LIST_API_SUFFIX);
+        }
+
+        private static String responseExcerpt(String body) {
+            if (body == null || body.isBlank()) {
+                return "<empty response body>";
+            }
+            String excerpt = body.replaceAll("\\s+", " ").trim();
+            return excerpt.length() <= 500 ? excerpt : excerpt.substring(0, 500) + "...";
         }
 
         @POST
@@ -65,24 +85,20 @@ public class OllamaModelSettings extends ModelConfiguration {
             if (settings == null
                     || settings.getApiBaseUrlCredentialsId() == null
                     || settings.getApiBaseUrlCredentialsId().isBlank()) {
+                LOGGER.warning("Cannot fetch Ollama models: API base URL credential is not configured");
                 return new ListBoxModel();
             }
 
             try {
-                String baseUrl = SecretsUtils.getSecretText(settings.getApiBaseUrlCredentialsId(), context);
-                if (baseUrl == null || baseUrl.isBlank()) {
+                String configuredBaseUrl = SecretsUtils.getSecretText(settings.getApiBaseUrlCredentialsId(), context);
+                if (configuredBaseUrl == null || configuredBaseUrl.isBlank()) {
+                    LOGGER.warning("Cannot fetch Ollama models: configured API base URL credential was not resolved");
                     return new ListBoxModel();
                 }
 
-                if (!baseUrl.endsWith("/")) {
-                    baseUrl += "/";
-                }
-                String suffix = MODELS_LIST_API_SUFFIX.startsWith("/")
-                        ? MODELS_LIST_API_SUFFIX.substring(1)
-                        : MODELS_LIST_API_SUFFIX;
-
+                URI endpoint = buildModelsListUri(configuredBaseUrl);
                 HttpRequest.Builder modelsListReqBuilder = HttpRequest.newBuilder()
-                        .uri(URI.create(baseUrl + suffix))
+                        .uri(endpoint)
                         .header("User-Agent", "Jenkins-Ollama-Plugin/1.0")
                         .GET();
 
@@ -101,23 +117,52 @@ public class OllamaModelSettings extends ModelConfiguration {
                 HttpRequest modelsListReq = modelsListReqBuilder.build();
                 HttpResponse<String> response = httpClient.send(modelsListReq, HttpResponse.BodyHandlers.ofString());
 
-                if (response.statusCode() != 200
-                        || response.body() == null
-                        || response.body().isBlank()) {
+                String endpointDescription = endpoint.getHost() + endpoint.getPath();
+                if (response.statusCode() != 200) {
+                    LOGGER.log(
+                            Level.WARNING,
+                            "Ollama model-list request to {0} returned HTTP {1}: {2}",
+                            new Object[] {
+                                endpointDescription, response.statusCode(), responseExcerpt(response.body())
+                            });
+                    return new ListBoxModel();
+                }
+                if (response.body() == null || response.body().isBlank()) {
+                    LOGGER.log(Level.WARNING, "Ollama model-list request to {0} returned an empty response body", endpointDescription);
                     return new ListBoxModel();
                 }
 
-                JsonElement jsonElement = JsonParser.parseString(response.body());
+                JsonElement jsonElement;
+                try {
+                    jsonElement = JsonParser.parseString(response.body());
+                } catch (JsonParseException e) {
+                    LOGGER.log(
+                            Level.WARNING,
+                            "Ollama model-list response from {0} was not valid JSON: {1}",
+                            new Object[] {endpointDescription, responseExcerpt(response.body())});
+                    return new ListBoxModel();
+                }
                 if (!jsonElement.isJsonObject()) {
-                    Logger.getLogger(OllamaModelSettings.class.getName()).log(Level.WARNING, "JSON object is missing");
+                    LOGGER.log(
+                            Level.WARNING,
+                            "Ollama model-list response from {0} was not a JSON object: {1}",
+                            new Object[] {endpointDescription, responseExcerpt(response.body())});
                     return new ListBoxModel();
                 }
 
                 JsonObject resJson = jsonElement.getAsJsonObject();
-                if (resJson.has("error")
-                        || !resJson.has("models")
-                        || !resJson.get("models").isJsonArray()) {
-                    Logger.getLogger(OllamaModelSettings.class.getName()).log(Level.WARNING, "JSON prop is missing");
+                if (resJson.has("error")) {
+                    LOGGER.log(
+                            Level.WARNING,
+                            "Ollama model-list endpoint {0} returned an API error: {1}",
+                            new Object[] {endpointDescription, responseExcerpt(resJson.get("error").toString())});
+                    return new ListBoxModel();
+                }
+                if (!resJson.has("models") || !resJson.get("models").isJsonArray()) {
+                    LOGGER.log(
+                            Level.WARNING,
+                            "Ollama model-list response from {0} has no models array: {1}",
+                            new Object[] {endpointDescription, responseExcerpt(response.body())});
                     return new ListBoxModel();
                 }
 
@@ -135,13 +180,16 @@ public class OllamaModelSettings extends ModelConfiguration {
                     }
                 });
 
+                if (models.isEmpty()) {
+                    LOGGER.log(Level.INFO, "Ollama model-list endpoint {0} returned no named models", endpointDescription);
+                }
                 return models;
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                Logger.getLogger(OllamaModelSettings.class.getName()).log(Level.SEVERE, null, e);
+                LOGGER.log(Level.WARNING, "Interrupted while fetching the Ollama model list", e);
                 return new ListBoxModel();
-            } catch (IOException | JsonParseException | IllegalStateException e) {
-                Logger.getLogger(OllamaModelSettings.class.getName()).log(Level.SEVERE, null, e);
+            } catch (IOException | IllegalStateException e) {
+                LOGGER.log(Level.WARNING, "Failed to fetch or parse the Ollama model list", e);
                 return new ListBoxModel();
             }
         }
