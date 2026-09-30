@@ -14,20 +14,23 @@ import java.util.Collections;
 import jenkins.model.GlobalConfiguration;
 import jenkins.model.Jenkins;
 import lombok.Getter;
+import lombok.Setter;
 import org.jenkinsci.plugins.plaincredentials.StringCredentials;
 import org.jspecify.annotations.NonNull;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.verb.POST;
 
 @Extension
 public class OllamaClientSettings extends ModelClientConfiguration {
-    private @Getter final long keepAliveSeconds;
-    private @Getter final boolean usesCloudflareAccess;
-    private @Getter final String apiBaseUrlCredentialsId;
-    private @Getter final String cloudflareAccessClientIdCredentialId;
-    private @Getter final String cloudflareAccessClientSecretCredentialId;
+
+    private @Getter @Setter(onMethod_ = @DataBoundSetter) long keepAliveSeconds;
+    private @Getter @Setter(onMethod_ = @DataBoundSetter) boolean usesCloudflareAccess;
+    private @Getter @Setter(onMethod_ = @DataBoundSetter) String apiBaseUrlCredentialsId;
+    private @Getter @Setter(onMethod_ = @DataBoundSetter) String cloudflareAccessClientIdCredentialId;
+    private @Getter @Setter(onMethod_ = @DataBoundSetter) String cloudflareAccessClientSecretCredentialId;
 
     public OllamaClientSettings() throws FormException {
         super(0L);
