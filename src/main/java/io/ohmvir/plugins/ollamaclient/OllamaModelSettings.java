@@ -9,7 +9,6 @@ import hudson.model.Descriptor;
 import hudson.model.Item;
 import hudson.util.ListBoxModel;
 import io.ohmvir.plugins.jenkinsaisynapse.configuration.models.ModelConfiguration;
-import io.ohmvir.plugins.jenkinsaisynapse.utils.SecretsUtils;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -41,8 +40,9 @@ public class OllamaModelSettings extends ModelConfiguration {
     }
 
     @Extension
-    public static class DescriptorImpl extends Descriptor<ModelConfiguration> {
+    public static class DescriptorImpl extends ModelConfiguration.DescriptorImpl {
         private static final String MODELS_LIST_API_SUFFIX = "/api/tags";
+        private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
         private static final Logger LOGGER = Logger.getLogger(OllamaModelSettings.class.getName());
         private static final HttpClient httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
@@ -55,14 +55,7 @@ public class OllamaModelSettings extends ModelConfiguration {
         }
 
         static URI buildModelsListUri(String baseUrl) {
-            String normalizedBaseUrl = baseUrl.trim();
-            while (normalizedBaseUrl.endsWith("/")) {
-                normalizedBaseUrl = normalizedBaseUrl.substring(0, normalizedBaseUrl.length() - 1);
-            }
-            if (normalizedBaseUrl.endsWith("/api")) {
-                normalizedBaseUrl = normalizedBaseUrl.substring(0, normalizedBaseUrl.length() - 4);
-            }
-            return URI.create(normalizedBaseUrl + MODELS_LIST_API_SUFFIX);
+            return OllamaClientSettings.buildApiUri(baseUrl, MODELS_LIST_API_SUFFIX);
         }
 
         private static String responseExcerpt(String body) {
@@ -71,6 +64,11 @@ public class OllamaModelSettings extends ModelConfiguration {
             }
             String excerpt = body.replaceAll("\\s+", " ").trim();
             return excerpt.length() <= 500 ? excerpt : excerpt.substring(0, 500) + "...";
+        }
+
+        private static String getStringOrDefault(JsonObject obj, String key, String defaultValue) {
+            JsonElement element = obj.get(key);
+            return element != null && element.isJsonPrimitive() ? element.getAsString() : defaultValue;
         }
 
         @POST
@@ -90,8 +88,8 @@ public class OllamaModelSettings extends ModelConfiguration {
             }
 
             try {
-                String configuredBaseUrl = SecretsUtils.getSecretText(settings.getApiBaseUrlCredentialsId(), context);
-                if (configuredBaseUrl == null || configuredBaseUrl.isBlank()) {
+                String configuredBaseUrl = settings.resolveApiBaseUrl(context);
+                if (configuredBaseUrl == null) {
                     LOGGER.warning("Cannot fetch Ollama models: configured API base URL credential was not resolved");
                     return new ListBoxModel();
                 }
@@ -100,19 +98,9 @@ public class OllamaModelSettings extends ModelConfiguration {
                 HttpRequest.Builder modelsListReqBuilder = HttpRequest.newBuilder()
                         .uri(endpoint)
                         .header("User-Agent", "Jenkins-Ollama-Plugin/1.0")
+                        .timeout(REQUEST_TIMEOUT)
                         .GET();
-
-                if (settings.isUsesCloudflareAccess()) {
-                    String clientId =
-                            SecretsUtils.getSecretText(settings.getCloudflareAccessClientIdCredentialId(), context);
-                    String clientSecret =
-                            SecretsUtils.getSecretText(settings.getCloudflareAccessClientSecretCredentialId(), context);
-
-                    if (clientId != null && clientSecret != null) {
-                        modelsListReqBuilder.header("CF-Access-Client-Id", clientId);
-                        modelsListReqBuilder.header("CF-Access-Client-Secret", clientSecret);
-                    }
-                }
+                settings.applyCloudflareAccessHeaders(modelsListReqBuilder, context);
 
                 HttpRequest modelsListReq = modelsListReqBuilder.build();
                 HttpResponse<String> response = httpClient.send(modelsListReq, HttpResponse.BodyHandlers.ofString());
@@ -171,10 +159,8 @@ public class OllamaModelSettings extends ModelConfiguration {
                 resJson.getAsJsonArray("models").forEach(element -> {
                     if (element.isJsonObject()) {
                         JsonObject modelObj = element.getAsJsonObject();
-                        String name =
-                                modelObj.has("name") ? modelObj.get("name").getAsString() : "";
-                        String model =
-                                modelObj.has("model") ? modelObj.get("model").getAsString() : name;
+                        String name = getStringOrDefault(modelObj, "name", "");
+                        String model = getStringOrDefault(modelObj, "model", name);
                         if (!name.isEmpty()) {
                             models.add(name, model);
                         }
